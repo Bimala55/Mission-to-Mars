@@ -7,6 +7,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 
 
 def scrape_all():
+
     # Initiate headless driver for deployment
     executable_path = {'executable_path': ChromeDriverManager().install()}
     browser = Browser('chrome', **executable_path, headless=True)
@@ -14,12 +15,14 @@ def scrape_all():
     news_title, news_paragraph = mars_news(browser)
 
     # Run all scraping functions and store results in a dictionary
+    
     data = {
         "news_title": news_title,
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "hemispheres": mars_hemisphere(browser)
     }
 
     # Stop webdriver and return data
@@ -96,6 +99,48 @@ def mars_facts():
 
     # Convert dataframe into HTML format, add bootstrap
     return df.to_html(classes="table table-striped")
+  
+
+def mars_hemisphere(browser):
+    # Visit URL
+    url = 'https://data-class-mars-hemispheres.s3.amazonaws.com/Mars_Hemispheres/index.html'
+    browser.visit(url)
+
+    # Optional delay for loading the page
+    browser.is_element_present_by_css('a.itemLink', wait_time=1)
+
+
+    # Create a list to hold the images and titles.
+    hemisphere_image_urls = []
+
+    # Write code to retrieve the image urls and titles for each hemisphere.
+    html = browser.html
+    img_soup = soup(html, 'html.parser')
+    links = []
+
+   
+    # hemisphere_image_urls = img_soup.find('img', class_='thumb').get('src')
+    for link_tag in img_soup.find_all('a', class_ ='itemLink'):
+        links.append(link_tag.get('href'))
+    links = list(set(links))
+    links.remove('#')
+
+    for link in links:
+        hemispheres = {}
+        img_url = f'https://data-class-mars-hemispheres.s3.amazonaws.com/Mars_Hemispheres/{link}'
+        browser.visit(img_url)
+        html = browser.html
+        link_soup = soup(html, 'html.parser')
+
+        # image_url = link_soup.find('img', class_ = 'wide-image').get('src')
+        image_url = link_soup.find('a', href = True, text = 'Sample' ).get('href')
+        full_image_url = f'https://data-class-mars-hemispheres.s3.amazonaws.com/Mars_Hemispheres/{image_url}'
+        page_title = link_soup.find('h2', class_ = 'title').text
+        hemispheres['img_url'] = full_image_url
+        hemispheres['title'] = page_title
+        hemisphere_image_urls.append(hemispheres)
+
+    return hemisphere_image_urls
 
 if __name__ == "__main__":
 
